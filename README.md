@@ -40,8 +40,9 @@ fn main(){
 ```
 
 ## Cons
-- The set of supported glyphs is specified at compile-time
-
+- Currently, only the fixed set of glyphs that were specified 
+  at compile time can be displayed at runtime.
+  
 ## Pros
 - Truly scalable text without repeated rasterization 
   of glyphs at runtime
