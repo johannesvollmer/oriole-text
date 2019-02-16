@@ -4,6 +4,8 @@ This crate simplifies text rending with the GPU.
 It is meant to be used for rendering scalable text
 within higher-level UI crates.
 
+Attention: This library is currently work in progress.
+
 # Concept
 Inside your project's `build.rs` file, you use
 `oriole-text-dev` to bake the signed distance fields 
