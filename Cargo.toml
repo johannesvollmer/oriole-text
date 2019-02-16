@@ -1,0 +1,10 @@
+[package]
+name = "oriole-text"
+version = "0.1.0"
+authors = ["johannesvollmer <johannes.boenki@t-online.de>"]
+edition = "2018"
+
+[dependencies]
+signed-distance-field = "0.6.2"
+rusttype = "0.7.5"
+compress = "0.1.2"
