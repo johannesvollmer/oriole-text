@@ -5,6 +5,18 @@ authors = ["johannesvollmer <johannes.boenki@t-online.de>"]
 edition = "2018"
 
 [dependencies]
-signed-distance-field = "0.6.2"
-rusttype = "0.7.5"
+# serialization
+serde = { version = "1.0.87", features = ["derive"] }
 compress = "0.1.2"
+bincode = "1.1.1"
+
+# alternatives to std
+hashbrown = "0.1.8"
+
+
+
+# optional rendering presets
+glium = { version = "0.23.0", optional = true }
+
+[features]
+glium_render = [ "glium" ]

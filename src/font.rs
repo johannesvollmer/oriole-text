@@ -1,78 +1,84 @@
-use hashbrown::HashMap;
+use crate::atlas::{ Atlas, SerializedAtlas };
+use crate::rectangle::Rectangle;
+use std::io::{ Read, Write };
+pub use hashbrown::HashMap;
+use crate::text::LayoutGlyphs;
 use serde::{ Serialize, Deserialize };
 
-
-pub struct Atlas<I, K, V>
-    where I: ImageData
-{
-    elements: HashMap<K, (Rectangle, V)>,
-    image: I,
-    width: usize,
-    height: usize,
-}
-
-pub trait ImageData: Serialize + Deserialize {}
-impl ImageData for &'_ [u8] {}
-impl ImageData for Vec<u8> {}
-
-
-#[derive(Serialize, Deserialize)]
-pub struct SerializedAtlas<I, K, V> where I: ImageData {
-    elements: Vec<(K, (Rectangle, V))>,
-    image: I,
-    width: usize,
-    height: usize,
+pub struct Font {
+    pub atlas: Atlas,
+    pub glyphs: HashMap<char, GlyphLayout>,
+    pub kerning: HashMap<(char, char), f32>,
+    pub layout: FontLayout
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Rectangle {
-    x: usize,
-    y: usize,
-    width: usize,
-    height: usize,
+pub struct SerializedFont {
+    pub atlas: SerializedAtlas,
+    pub glyphs: Vec<(char, GlyphLayout)>,
+    pub kerning: Vec<((char, char), f32)>,
+    pub layout: FontLayout
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FontLayout {
+    pub advance_y: f32,
+//    pub space_advance_x: f32,
+//    pub tab_advance_x: f32,
+    pub ascent: f32,
+    pub descent: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GlyphLayout {
+    pub bounds: Rectangle,
+    pub advance_x: f32,
 }
 
 
+impl Font {
 
-use std::io::{ Read, Write, Result };
-
-impl<I, K, V> Atlas<I, K, V> {
-
-    pub fn read(reader: &mut impl Read) -> Result<Self> {
-        let mut uncompressed = Vec::with_capacity(2014);
-        compress::lz4::Decoder::new(reader).read_to_end(uncompressed)?;
-        Self::read_uncompressed(&uncompressed)
+    pub fn layout_glyphs<S>(&self, chars: S) -> LayoutGlyphs<S> where S: Iterator<Item=char> {
+        LayoutGlyphs::new(self, chars)
     }
 
-    pub fn write(self, writer: &mut impl Write) -> Result<()> {
-        let mut compressed = Vec::with_capacity(2014);
-        self.write_uncompressed(&mut compressed)?;
-        compress::lz4::Encoder::new(writer).write_all(&compressed)
+
+
+    pub fn read(reader: impl Read) -> Option<Self> {
+        let mut uncompressed = Vec::with_capacity(2048);
+        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed).ok()?;
+        Self::read_uncompressed(uncompressed.as_slice()).ok()
     }
 
-    pub fn read_uncompressed(reader: &mut impl Read) -> bincode::Result<Self> {
-        bincode::deserialize_from(&bytes).map(|s| Self::deserialized(s))
+    pub fn write(self, writer: impl Write) -> Option<()> {
+        let mut compressed = Vec::with_capacity(2048);
+        self.write_uncompressed(&mut compressed).ok()?;
+        compress::lz4::Encoder::new(writer).write_all(&compressed).ok()
+    }
+
+    pub fn read_uncompressed(reader: impl Read) -> bincode::Result<Self> {
+        bincode::deserialize_from(reader).map(|s| Self::deserialized(s))
     }
 
     pub fn write_uncompressed(self, writer: impl Write) -> bincode::Result<()> {
-        bincode::serialize_into(writer, self.serialized())
+        bincode::serialize_into(writer, &self.serialized())
     }
 
-    pub fn deserialized(serialized: SerializedAtlas<I, K, V>) -> Self {
-        Atlas {
-            elements: serialized.elements.iter().collect(),
-            image: serialized.image,
-            width: serialized.width,
-            height: serialized.height
+    pub fn deserialized(serialized: SerializedFont) -> Self {
+        Font {
+            atlas: Atlas::deserialized(serialized.atlas),
+            glyphs: serialized.glyphs.into_iter().collect(),
+            kerning: serialized.kerning.into_iter().collect(),
+            layout: serialized.layout
         }
     }
 
-    pub fn serialized(self) -> SerializedAtlas<I, K, V> {
-        SerializedAtlas {
-            elements: self.elements.iter().collect(),
-            image: self.image,
-            width: self.width,
-            height: self.height
+    pub fn serialized(self) -> SerializedFont {
+        SerializedFont {
+            atlas: self.atlas.serialized(),
+            glyphs: self.glyphs.into_iter().collect(),
+            kerning: self.kerning.into_iter().collect(),
+            layout: self.layout
         }
     }
 
