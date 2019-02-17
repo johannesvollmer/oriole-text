@@ -10,9 +10,9 @@ pub struct Atlas {
 
 #[derive(Serialize, Deserialize)]
 pub struct SerializedAtlas {
-    glyphs: Vec<(char, Rectangle)>,
-    distance_field: Vec<u8>,
-    resolution: (usize, usize)
+    pub glyphs: Vec<(char, Rectangle)>,
+    pub distance_field: Vec<u8>,
+    pub resolution: (usize, usize)
 }
 
 impl Atlas {
