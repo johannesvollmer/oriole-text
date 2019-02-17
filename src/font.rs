@@ -37,31 +37,8 @@ pub struct GlyphLayout {
 
 
 impl Font {
-
     pub fn layout_glyphs<S>(&self, chars: S) -> LayoutGlyphs<S> where S: Iterator<Item=char> {
         LayoutGlyphs::new(self, chars)
-    }
-
-
-
-    pub fn read(reader: impl Read) -> Option<Self> {
-        let mut uncompressed = Vec::with_capacity(2048);
-        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed).ok()?;
-        Self::read_uncompressed(uncompressed.as_slice()).ok()
-    }
-
-    pub fn write(self, writer: impl Write) -> Option<()> {
-        let mut compressed = Vec::with_capacity(2048);
-        self.write_uncompressed(&mut compressed).ok()?;
-        compress::lz4::Encoder::new(writer).write_all(&compressed).ok()
-    }
-
-    pub fn read_uncompressed(reader: impl Read) -> bincode::Result<Self> {
-        bincode::deserialize_from(reader).map(|s| Self::deserialized(s))
-    }
-
-    pub fn write_uncompressed(self, writer: impl Write) -> bincode::Result<()> {
-        bincode::serialize_into(writer, &self.serialized())
     }
 
     pub fn deserialized(serialized: SerializedFont) -> Self {
@@ -82,5 +59,33 @@ impl Font {
         }
     }
 
+    pub fn read(reader: impl Read) -> Option<Self> {
+        Some(Self::deserialized(SerializedFont::read(reader)?))
+    }
+
+    pub fn write(self, writer: impl Write) -> Option<()> {
+        self.serialized().write(writer)
+    }
 }
 
+impl SerializedFont {
+    pub fn read(reader: impl Read) -> Option<Self> {
+        let mut uncompressed = Vec::with_capacity(2048);
+        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed).ok()?;
+        Self::read_uncompressed(uncompressed.as_slice()).ok()
+    }
+
+    pub fn write(self, writer: impl Write) -> Option<()> {
+        let mut compressed = Vec::with_capacity(2048);
+        self.write_uncompressed(&mut compressed).ok()?;
+        compress::lz4::Encoder::new(writer).write_all(&compressed).ok()
+    }
+
+    pub fn read_uncompressed(reader: impl Read) -> bincode::Result<Self> {
+        bincode::deserialize_from(reader)
+    }
+
+    pub fn write_uncompressed(self, writer: impl Write) -> bincode::Result<()> {
+        bincode::serialize_into(writer, &self)
+    }
+}
