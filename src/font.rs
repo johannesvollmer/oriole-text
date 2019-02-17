@@ -35,6 +35,11 @@ pub struct GlyphLayout {
     pub advance_x: f32,
 }
 
+pub enum Error {
+    Compress(::std::io::Error),
+    Bincode(bincode::Error)
+}
+
 
 impl Font {
     pub fn layout_glyphs<S>(&self, chars: S) -> LayoutGlyphs<S> where S: Iterator<Item=char> {
@@ -59,26 +64,26 @@ impl Font {
         }
     }
 
-    pub fn read(reader: impl Read) -> Option<Self> {
-        Some(Self::deserialized(SerializedFont::read(reader)?))
+    pub fn read(reader: impl Read) -> Result<Self, Error> {
+        Ok(Self::deserialized(SerializedFont::read(reader)?))
     }
 
-    pub fn write(self, writer: impl Write) -> Option<()> {
-        self.serialized().write(writer)
+    pub fn write(self, writer: impl Write) -> Result<(), Error> {
+        Ok(self.serialized().write(writer)?)
     }
 }
 
 impl SerializedFont {
-    pub fn read(reader: impl Read) -> Option<Self> {
+    pub fn read(reader: impl Read) -> Result<Self, Error> {
         let mut uncompressed = Vec::with_capacity(2048);
-        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed).ok()?;
-        Self::read_uncompressed(uncompressed.as_slice()).ok()
+        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed)?;
+        Ok(Self::read_uncompressed(uncompressed.as_slice())?)
     }
 
-    pub fn write(self, writer: impl Write) -> Option<()> {
+    pub fn write(self, writer: impl Write) -> Result<(), Error> {
         let mut compressed = Vec::with_capacity(2048);
-        self.write_uncompressed(&mut compressed).ok()?;
-        compress::lz4::Encoder::new(writer).write_all(&compressed).ok()
+        self.write_uncompressed(&mut compressed)?;
+        Ok(compress::lz4::Encoder::new(writer).write_all(&compressed)?)
     }
 
     pub fn read_uncompressed(reader: impl Read) -> bincode::Result<Self> {
@@ -87,5 +92,20 @@ impl SerializedFont {
 
     pub fn write_uncompressed(self, writer: impl Write) -> bincode::Result<()> {
         bincode::serialize_into(writer, &self)
+    }
+}
+
+
+use std::convert::From;
+
+impl From<bincode::Error> for Error {
+    fn from(error: bincode::Error) -> Self {
+        Error::Bincode(error)
+    }
+}
+
+impl From<::std::io::Error> for Error {
+    fn from(error: ::std::io::Error) -> Self {
+        Error::Compress(error)
     }
 }
