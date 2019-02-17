@@ -35,6 +35,7 @@ pub struct GlyphLayout {
     pub advance_x: f32,
 }
 
+#[derive(Debug)]
 pub enum Error {
     Compress(::std::io::Error),
     Bincode(bincode::Error)
