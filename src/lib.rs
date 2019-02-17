@@ -3,26 +3,24 @@ pub mod font;
 pub mod text;
 pub mod rectangle;
 
-#[cfg(feature = "glium_render")]
+#[cfg(feature = "glium-render")]
 pub mod glium_render;
 
 pub mod prelude {
     pub use crate::font::Font;
 //    pub use crate::text::TextCaretPositions;
 
-    #[cfg(feature = "glium_render")]
+    #[cfg(feature = "glium-render")]
     pub use crate::glium_render as gl;
 }
 
 
-#[cfg(text)]
-pub mod tests {
-    use crate::text::LayoutGlyphs;
-    use crate::font::Font;
-    use crate::text::layout_glyphs;
+#[cfg(test)]
+pub mod test {
+//    use crate::text::LayoutGlyphs;
+//    use crate::font::Font;
 
-    #[test]
-    fn api(font_bytes: &[u8]){
+    /*fn api(font_bytes: &[u8]){
         let font = Font::read(font_bytes).unwrap();
         let mut text_mesh: Vec<Vertex> = Vec::new();
         let mut caret_positions: Vec<(f32, f32)> = Vec::new();
@@ -45,18 +43,19 @@ pub mod tests {
                 })
             }
         }
-    }
+    }*/
 
-    #[cfg(feature = "glium_render")]
-    pub fn glium(font_bytes: &[u8]){
+    #[cfg(feature = "glium-render")]
+    pub fn glium(font: crate::font::SerializedFont){
         use glium::{glutin, Surface};
+        use crate::prelude::*;
 
         let mut events_loop = glutin::EventsLoop::new();
         let window = glutin::WindowBuilder::new();
         let context = glutin::ContextBuilder::new();
         let display = glium::Display::new(window, context, &events_loop).unwrap();
 
-        let font = Font::read(font_bytes).unwrap();
+        let font = Font::deserialized(font);
         let font_texture = crate::glium_render::atlas_texture(&display, &font.atlas).unwrap();
         let text_mesh = crate::glium_render::TextMesh::new(&display, &font, "Hello World").unwrap();
         let solid_text_program = crate::glium_render::SolidTextProgram::new(&display).unwrap();
@@ -79,7 +78,7 @@ pub mod tests {
                     ..Default::default()
                 };
 
-                solid_text_program.draw(&mut target, &font_texture, &text_mesh, &fill, &transform, &draw_parameters).unwrap();
+                solid_text_program.draw(&mut target, &font_texture, &text_mesh, fill, transform, &draw_parameters).unwrap();
             }
 
             target.finish().unwrap();

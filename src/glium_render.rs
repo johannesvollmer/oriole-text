@@ -6,7 +6,7 @@ use glium::DrawError;
 use glium::ProgramCreationError;
 use glium::backend::Facade;
 use glium::DrawParameters;
-use glium::uniforms::uniform;
+//use glium::uniforms::uniforms;
 use glium::uniform;
 use glium::texture::Texture2d;
 use glium::texture::TextureCreationError;
@@ -17,7 +17,7 @@ use crate::atlas::Atlas;
 
 
 pub struct SolidTextProgram {
-    pub program: glium::Program,
+    pub program: Program,
 }
 
 #[derive(Copy, Clone)]
@@ -26,14 +26,13 @@ pub struct GlyphQuadVertex {
     texture_coordinate: (f32, f32),
 }
 
-#[derive(Copy, Clone)]
 pub struct TextMesh {
     vertices: glium::VertexBuffer<GlyphQuadVertex>,
     indices: glium::IndexBuffer<u16>,
     width: f32,
 }
 
-#[derive(Display, Debug)]
+#[derive(Debug)]
 pub enum TextMeshCreationError {
     Vertex(glium::vertex::BufferCreationError),
     Index(glium::index::BufferCreationError),
@@ -44,13 +43,13 @@ glium::implement_vertex!(GlyphQuadVertex, position, texture_coordinate);
 
 
 pub fn atlas_texture(facade: &impl Facade, atlas: &Atlas)
-     -> Result<glium::texture::Texture2d, TextureCreationError>
+     -> Result<Texture2d, TextureCreationError>
 {
-    atlas_texture(facade, &atlas.distance_field, atlas.resolution)
+    raw_u8_texture(facade, &atlas.distance_field, atlas.resolution)
 }
 
 pub fn raw_u8_texture(facade: &impl Facade, atlas: &[u8], dimensions: (usize, usize))
-    -> Result<glium::texture::Texture2d, TextureCreationError>
+    -> Result<Texture2d, TextureCreationError>
 {
     glium::texture::Texture2d::new(
         facade, RawImage2d {
@@ -106,8 +105,8 @@ impl SolidTextProgram {
         surface: &mut impl Surface,
         font_distance_field: &glium::texture::Texture2d,
         mesh: &TextMesh,
-        fill: &(f32, f32, f32, f32),
-        transform_matrix: &[[f32; 4]; 4],
+        fill: (f32, f32, f32, f32),
+        transform_matrix: [[f32; 4]; 4],
         draw_parameters: &DrawParameters,
     )
         -> Result<(), DrawError>
@@ -117,7 +116,7 @@ impl SolidTextProgram {
             &mesh.indices,
             &self.program,
 
-            uniform! {
+            &uniform! {
                 fill: fill,
                 transform: transform_matrix,
                 distance_field: font_distance_field,
@@ -155,12 +154,12 @@ impl TextMesh {
         let mut indices = Vec::new();
         let mut width = 0.0;
 
-        for glyph in font.layout_glyphs(text) {
+        for glyph in font.layout_glyphs(text.chars()) {
             let quad_positions = glyph.layout.in_mesh.vertices();
             let quad_texture_coords = glyph.layout.in_atlas.vertices();
 
             for quad_vertex_index in 0..4 {
-                for triangle_index in [ 0,1,2,  2,3,0 ] {
+                for triangle_index in &[ 0,1,2,  2,3,0 ] {
                     indices.push((vertices.len() + triangle_index) as u16);
                 }
 

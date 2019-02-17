@@ -7,8 +7,8 @@ within higher-level UI crates.
 Attention: This library is currently work in progress.
 
 # Concept
-Inside your project's `build.rs` file, you use
-`oriole-text-dev` to bake the signed distance fields 
+Inside your project's `build.rs` file, you use this crates twin
+[`oriole-text-dev` to bake the signed distance fields](https://github.com/johannesvollmer/oriole-text-dev) 
 of the characters of a font into a single texture atlas.
 
 ```rust

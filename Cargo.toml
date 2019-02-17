@@ -19,4 +19,4 @@ hashbrown = "0.1.8"
 glium = { version = "0.23.0", optional = true }
 
 [features]
-glium_render = [ "glium" ]
+glium-render = [ "glium" ]
