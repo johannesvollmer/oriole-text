@@ -81,7 +81,7 @@ impl SerializedFont {
         Ok(Self::read_uncompressed(uncompressed.as_slice())?)
     }
 
-    pub fn write(self, writer: impl Write) -> Result<(), Error> {
+    pub fn write(&self, writer: impl Write) -> Result<(), Error> {
         let mut compressed = Vec::with_capacity(2048);
         self.write_uncompressed(&mut compressed)?;
         Ok(compress::lz4::Encoder::new(writer).write_all(&compressed)?)
@@ -91,8 +91,8 @@ impl SerializedFont {
         bincode::deserialize_from(reader)
     }
 
-    pub fn write_uncompressed(self, writer: impl Write) -> bincode::Result<()> {
-        bincode::serialize_into(writer, &self)
+    pub fn write_uncompressed(&self, writer: impl Write) -> bincode::Result<()> {
+        bincode::serialize_into(writer, self)
     }
 }
 
