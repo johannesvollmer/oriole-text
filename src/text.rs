@@ -63,7 +63,7 @@ impl<'f, S> Iterator for LayoutGlyphs<'f, S>
                 character if !character.is_control() => { // handle displayable characters
                     // adjust caret for all following characters according to the kerning
                     if let Some(previous) = self.previous_char {
-                        self.caret.0 += self.font.kerning[&(previous, character)];
+                        self.caret.0 += self.font.kerning.get(&(previous, character)).unwrap_or(&0.0);
                     }
 
                     self.previous_char = Some(character);
