@@ -4,6 +4,7 @@ use std::io::{ Read, Write };
 pub use hashbrown::HashMap;
 use crate::text::LayoutGlyphs;
 use serde::{ Serialize, Deserialize };
+use lz4_compression::prelude::{ decompress, compress };
 
 pub struct Font {
     pub atlas: Atlas,
@@ -37,7 +38,8 @@ pub struct GlyphLayout {
 
 #[derive(Debug)]
 pub enum Error {
-    Compress(::std::io::Error),
+    IO(std::io::Error),
+    Decompress(lz4_compression::decompress::Error),
     Bincode(bincode::Error)
 }
 
@@ -75,16 +77,25 @@ impl Font {
 }
 
 impl SerializedFont {
-    pub fn read(reader: impl Read) -> Result<Self, Error> {
-        let mut uncompressed = Vec::with_capacity(2048);
-        compress::lz4::Decoder::new(reader).read_to_end(&mut uncompressed)?;
-        Ok(Self::read_uncompressed(uncompressed.as_slice())?)
+    pub fn read(mut reader: impl Read) -> Result<Self, Error> {
+        let mut compressed = Vec::with_capacity(2048);
+        reader.read_to_end(&mut compressed)?;
+
+        // TODO without conversion between readers and byte arrays? ...
+        let decompressed = decompress(&compressed)?;
+
+        Ok(Self::read_uncompressed(decompressed.as_slice())?)
     }
 
-    pub fn write(&self, writer: impl Write) -> Result<(), Error> {
-        let mut compressed = Vec::with_capacity(2048);
-        self.write_uncompressed(&mut compressed)?;
-        Ok(compress::lz4::Encoder::new(writer).write_all(&compressed)?)
+    pub fn write(&self, mut writer: impl Write) -> Result<(), Error> {
+        let mut uncompressed = Vec::with_capacity(2048);
+        self.write_uncompressed(&mut uncompressed)?;
+
+        // TODO without conversion between readers and byte arrays? ...
+        let compressed = compress(&uncompressed);
+
+        writer.write_all(&compressed)?;
+        Ok(())
     }
 
     pub fn read_uncompressed(reader: impl Read) -> bincode::Result<Self> {
@@ -105,8 +116,14 @@ impl From<bincode::Error> for Error {
     }
 }
 
-impl From<::std::io::Error> for Error {
-    fn from(error: ::std::io::Error) -> Self {
-        Error::Compress(error)
+impl From<lz4_compression::decompress::Error> for Error {
+    fn from(error: lz4_compression::decompress::Error) -> Self {
+        Error::Decompress(error)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::IO(error)
     }
 }
