@@ -1,6 +1,6 @@
 use crate::font::Font;
+use crate::font::GlyphQuad;
 use crate::rectangle::Rectangle;
-
 
 
 pub struct LayoutGlyphs<'f, S: Iterator<Item = char>> {
@@ -17,15 +17,7 @@ pub struct BuiltGlyph {
     pub character: char,
     pub index_in_line: usize,
     pub line: usize,
-    pub layout: GlyphQuad,
-}
-
-pub struct GlyphQuad {
-    /// Texture coordinates in the font atlas.
-    pub in_atlas: Rectangle,
-
-    /// Positioning inside this text mesh.
-    pub in_mesh: Rectangle,
+    pub quad: GlyphQuad,
 }
 
 
@@ -59,6 +51,27 @@ impl<'f, S> Iterator for LayoutGlyphs<'f, S>
     fn next(&mut self) -> Option<BuiltGlyph> {
         self.chars.next().and_then(|character|{
             let displayable_character = match character {
+                '\n' => {
+                    self.caret.1 += self.font.layout.advance_y;
+                    self.caret.0 = 0.0;
+
+                    self.line += 1;
+                    self.index_in_line = 0;
+
+                    None
+                },
+
+                /*' ' => {
+                    self.caret.0 += self.font.layout.space_advance_x;
+                    self.index_in_line += 1;
+                    None
+                },
+
+                '\t' => {
+                    self.caret.0 += self.font.layout.tab_advance_x;
+                    self.index_in_line += 1;
+                    None
+                },*/
 
                 character if !character.is_control() => { // handle displayable characters
                     // adjust caret for all following characters according to the kerning
@@ -67,7 +80,6 @@ impl<'f, S> Iterator for LayoutGlyphs<'f, S>
                     }
 
                     self.previous_char = Some(character);
-
 
                     // acquire font metrics
                     let mesh_layout = self.font.glyphs.get(&character).unwrap();
@@ -80,40 +92,25 @@ impl<'f, S> Iterator for LayoutGlyphs<'f, S>
                     self.caret.0 += mesh_layout.advance_x;
                     self.index_in_line += 1;
 
-                    // a character like ' ' or '\t' advances the caret but does not render anything
-                    self.font.atlas.glyphs.get(&character).map(|atlas_layout|{
+                    // a character like ' ' or '\t' advances the caret but does not render anything,
+                    // thus return none for those
+                    mesh_layout.quad.map(|quad|{
                         BuiltGlyph {
                             character,
                             line: self.line,
                             index_in_line: current_index_in_line,
-                            layout: GlyphQuad {
-                                in_atlas: atlas_layout.translated(current_caret),
-                                in_mesh: mesh_layout.bounds.translated(current_caret)
-                            },
+                            quad: GlyphQuad {
+                                texture: quad.texture,
+                                geometry: Rectangle {
+                                    dimensions: quad.geometry.dimensions,
+                                    position: (
+                                        current_caret.0 + quad.geometry.position.0,
+                                        current_caret.1 + quad.geometry.position.1
+                                    ),
+                                },
+                            }
                         }
                     })
-                },
-
-                '\n' => {
-                    self.caret.1 += self.font.layout.advance_y;
-                    self.caret.0 = 0.0;
-
-                    self.line += 1;
-                    self.index_in_line = 0;
-
-                    None
-                },
-
-                ' ' => {
-                    self.caret.0 += self.font.layout.space_advance_x;
-                    self.index_in_line += 1;
-                    None
-                },
-
-                '\t' => {
-                    self.caret.0 += self.font.layout.tab_advance_x;
-                    self.index_in_line += 1;
-                    None
                 },
 
                 _ => None

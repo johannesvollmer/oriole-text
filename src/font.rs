@@ -1,4 +1,3 @@
-use crate::atlas::{ Atlas, SerializedAtlas };
 use crate::rectangle::Rectangle;
 use std::io::{ Read, Write };
 pub use hashbrown::HashMap;
@@ -7,33 +6,44 @@ use serde::{ Serialize, Deserialize };
 use lz4_compression::prelude::{ decompress, compress };
 
 pub struct Font {
-    pub atlas: Atlas,
     pub glyphs: HashMap<char, GlyphLayout>,
     pub kerning: HashMap<(char, char), f32>,
-    pub layout: FontLayout
+    pub layout: FontLayout,
+    pub atlas: Atlas,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SerializedFont {
-    pub atlas: SerializedAtlas,
     pub glyphs: Vec<(char, GlyphLayout)>,
     pub kerning: Vec<((char, char), f32)>,
-    pub layout: FontLayout
+    pub layout: FontLayout,
+    pub atlas: Atlas,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct FontLayout {
     pub advance_y: f32,
-    pub space_advance_x: f32,
-    pub tab_advance_x: f32,
     pub ascent: f32,
     pub descent: f32,
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct Atlas {
+    pub resolution: (usize, usize),
+    pub distance_field: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct GlyphLayout {
-    pub bounds: Rectangle,
+    /// ' ' and '\t' will not have any geometry, but an advance_x
+    pub quad: Option<GlyphQuad>,
     pub advance_x: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub struct GlyphQuad {
+    pub geometry: Rectangle,
+    pub texture: Rectangle,
 }
 
 #[derive(Debug)]
@@ -51,7 +61,7 @@ impl Font {
 
     pub fn deserialized(serialized: SerializedFont) -> Self {
         Font {
-            atlas: Atlas::deserialized(serialized.atlas),
+            atlas: serialized.atlas,
             glyphs: serialized.glyphs.into_iter().collect(),
             kerning: serialized.kerning.into_iter().collect(),
             layout: serialized.layout
@@ -60,7 +70,7 @@ impl Font {
 
     pub fn serialized(self) -> SerializedFont {
         SerializedFont {
-            atlas: self.atlas.serialized(),
+            atlas: self.atlas,
             glyphs: self.glyphs.into_iter().collect(),
             kerning: self.kerning.into_iter().collect(),
             layout: self.layout

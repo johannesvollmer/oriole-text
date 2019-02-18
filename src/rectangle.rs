@@ -1,6 +1,6 @@
 use serde::{ Serialize, Deserialize };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Rectangle {
     pub position: (f32, f32),
     pub dimensions: (f32, f32),
