@@ -24,8 +24,8 @@ pub struct SerializedFont {
 #[derive(Serialize, Deserialize)]
 pub struct FontLayout {
     pub advance_y: f32,
-//    pub space_advance_x: f32,
-//    pub tab_advance_x: f32,
+    pub space_advance_x: f32,
+    pub tab_advance_x: f32,
     pub ascent: f32,
     pub descent: f32,
 }

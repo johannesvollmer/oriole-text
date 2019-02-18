@@ -104,19 +104,17 @@ impl<'f, S> Iterator for LayoutGlyphs<'f, S>
                     None
                 },
 
-
-                // TODO check if fonts include a space character without any content!!!!
-                /*' ' => {
+                ' ' => {
                     self.caret.0 += self.font.layout.space_advance_x;
                     self.index_in_line += 1;
                     None
-                },*/
+                },
 
-                /*'\t' => {
+                '\t' => {
                     self.caret.0 += self.font.layout.tab_advance_x;
                     self.index_in_line += 1;
                     None
-                },*/
+                },
 
                 _ => None
             };
